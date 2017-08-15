@@ -39,21 +39,24 @@ def add_to_list(xmldata, beginning):
     flag = True
     
     # Reply now a dictionary. Look down into <Post> fot the date tag
-    for posts in xmldata['tumblr']['posts']['post']:
-        date_of_post = posts['@date-gmt'].split()[0]
-        
-        if date_of_post > beginning:
-            #print(beginning, date_of_post)
-            try:
-                #photo_num = len(posts['photoset']['photo'])
-                #for i in range(0, photo_num):
-                for sets in posts['photoset']['photo']:
-                    FILELIST.append(sets['photo-url'][0]['#text'])
-                    #FILELIST.append(posts['photoset']['photo'][i]['photo-url'][0]['#text'])
-            except:
-                FILELIST.append(posts['photo-url'][0]['#text'])
-        else:
-            flag = False
+    try:
+        for posts in xmldata['tumblr']['posts']['post']:
+            date_of_post = posts['@date-gmt'].split()[0]
+            
+            if date_of_post > beginning:
+                #print(beginning, date_of_post)
+                try:
+                    #photo_num = len(posts['photoset']['photo'])
+                    #for i in range(0, photo_num):
+                    for sets in posts['photoset']['photo']:
+                        FILELIST.append(sets['photo-url'][0]['#text'])
+                        #FILELIST.append(posts['photoset']['photo'][i]['photo-url'][0]['#text'])
+                except:
+                    FILELIST.append(posts['photo-url'][0]['#text'])
+            else:
+                flag = False
+    except:
+        flag = False
     
     return flag
 
