@@ -169,7 +169,7 @@ def ytdl_video_job(url_list):
     # Output format string to save in sub-directory
     outstring = sys.argv[1] + "/%(title)s-%(id)s.%(ext)s"
     # Run aria2c to do the work
-    subprocess.call(["youtube-dl", "-a", "manifest",  "-o", outstring])
+    subprocess.call(["youtube-dl", "-a", "manifest", "-i", "-o", outstring])
     
     # Cleanup
     os.remove("manifest")
