@@ -27,44 +27,79 @@ import xmltodict
 import datetime
 import datedelta
 import subprocess
+import re
 
-# Container to hold filenames
-FILELIST = []
+# Containers to hold filenames
+PHOTO_LIST = []
+ARIA2C_VIDEO = []
+YOUTUBE_DL_VIDEO = []
 
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
 
-def add_to_list(xmldata, beginning):
-    # Are we prior to our end date
+# Photos, videos or both? 0 = both, 1 = photos, 2 = videos
+WANTED = 2
+
+# Regex to filter video filenames
+pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
+
+def add_to_list(xmldata, beginning, medium):
     flag = True
     
-    # Reply now a dictionary. Look down into <Post> fot the date tag
-    try:
-        for posts in xmldata['tumblr']['posts']['post']:
-            date_of_post = posts['@date-gmt'].split()[0]
-            
-            if date_of_post > beginning:
-                #print(beginning, date_of_post)
-                try:
-                    #photo_num = len(posts['photoset']['photo'])
-                    #for i in range(0, photo_num):
-                    for sets in posts['photoset']['photo']:
-                        FILELIST.append(sets['photo-url'][0]['#text'])
-                        #FILELIST.append(posts['photoset']['photo'][i]['photo-url'][0]['#text'])
-                except:
-                    FILELIST.append(posts['photo-url'][0]['#text'])
-            else:
-                flag = False
-    except:
-        flag = False
+    # Are we prior to our end date
+    if medium == "photo":
+        # Reply now a dictionary. Look down into <Post> fot the date tag
+        try:
+            for posts in xmldata['tumblr']['posts']['post']:
+                date_of_post = posts['@date-gmt'].split()[0]
+                
+                if date_of_post > beginning:
+                    try:
+                        for sets in posts['photoset']['photo']:
+                            PHOTO_LIST.append(sets['photo-url'][0]['#text'])
+                    except:
+                        PHOTO_LIST.append(posts['photo-url'][0]['#text'])
+                else:
+                    flag = False
+        except:
+            flag = False
+        
+    if medium == "video":
+        try:
+            for posts in xmldata['tumblr']['posts']['post']:
+                date_of_post = posts['@date-gmt'].split()[0]
+                
+                if date_of_post > beginning:
+                    try:
+                        video_match = pattern.match(posts['video-player'][1]['#text'])
+                        video_url = video_match.group(1)
+                        
+                        if video_url.endswith(("/480", "/720")):
+                            video_url = video_url[:-4]
+                        
+                        if "youtube" in video_url:
+                            YOUTUBE_DL_VIDEO.append(video_url)
+                        elif "vimeo" in video_url:
+                            YOUTUBE_DL_VIDEO.append(video_url)
+                        else:
+                            ARIA2C_VIDEO.append(video_url)
+                    except:
+                        YOUTUBE_DL_VIDEO.append(posts['video-source'])
+                else:
+                    flag=False
+                
+        except:
+            flag = False
     
+    xmldata = []
     return flag
 
-def generate_photo_list(NUMBER):
+def collect_posts(NUMBER, medium):
     backdate = 0
     proceed = True
     offset = 0
     counter = 0
+    data = []
     
     # How far back (in months) to go. 0 is no limit.
     if len(sys.argv) == 3:
@@ -80,10 +115,10 @@ def generate_photo_list(NUMBER):
     
     while proceed:
         counter += 1
-        print("Getting Page " + str(counter))
+        print("Getting " + medium +"s page " + str(counter))
         # Get site info from Tumblr
-        tumblr_url = "http://{0}.tumblr.com/api/read?type=photo&num={1}&start={2}"
-        site_url = tumblr_url.format(sys.argv[1], NUMBER, offset)
+        tumblr_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
+        site_url = tumblr_url.format(sys.argv[1], medium, NUMBER, offset)
         
         try:
             response = urllib.request.urlopen(site_url)
@@ -92,13 +127,13 @@ def generate_photo_list(NUMBER):
             sys.exit(1)
         
         data = xmltodict.parse(response.read())
-        proceed = add_to_list(data, beginning)
+        proceed = add_to_list(data, beginning, medium)
         offset += NUMBER
     
     
-def start_aria_job():
+def aria_photo_job(url_list):
     # Not interested in GIFs
-    newlist = [ x for x in FILELIST if x.find(".gif") == -1]
+    newlist = [ x for x in url_list if x.find(".gif") == -1]
     # Remove duplicates
     newlist = list(set(newlist))
     
@@ -108,7 +143,33 @@ def start_aria_job():
             f.write(s + '\n')
     
     # Run aria2c to do the work
+    subprocess.call(["aria2c", "-j6", "-i", "manifest", "-s1", "-c", "-d", sys.argv[1]])
+    
+    # Cleanup
+    os.remove("manifest")
+
+def aria_video_job(url_list):
+    # Write a manifest for aria2c
+    with open("manifest", 'w') as f:
+        for s in url_list:
+            f.write(s + '\n')
+    
+    # Run aria2c to do the work
     subprocess.call(["aria2c", "-j4", "-i", "manifest", "-s1", "-c", "-d", sys.argv[1]])
+    
+    # Cleanup
+    os.remove("manifest")
+
+def ytdl_video_job(url_list):
+    # Write a manifest for aria2c
+    with open("manifest", 'w') as f:
+        for s in url_list:
+            f.write(s + '\n')
+    
+    # Output format string to save in sub-directory
+    outstring = sys.argv[1] + "/%(title)s-%(id)s.%(ext)s"
+    # Run aria2c to do the work
+    subprocess.call(["youtube-dl", "-a", "manifest",  "-o", outstring])
     
     # Cleanup
     os.remove("manifest")
@@ -120,6 +181,25 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.stderr.write("I need a tumblr name to crawl\n")
     
-    generate_photo_list(NUMBER);
-    print("Total posts " + str(len(FILELIST)))
-    start_aria_job()
+    if WANTED != 2:
+        collect_posts(NUMBER, "photo")
+    
+    if WANTED != 1:
+        collect_posts(NUMBER, "video")
+    
+    #for i in ARIA2C_VIDEO:
+        #print(i)
+    
+    #for i in YOUTUBE_DL_VIDEO:
+        #print(i)
+    
+    if PHOTO_LIST:
+        aria_photo_job(PHOTO_LIST)
+    
+    if ARIA2C_VIDEO:
+        aria_video_job(ARIA2C_VIDEO)
+    
+    if YOUTUBE_DL_VIDEO:
+        ytdl_video_job(YOUTUBE_DL_VIDEO)
+    print(len(ARIA2C_VIDEO))
+    print(len(YOUTUBE_DL_VIDEO))
