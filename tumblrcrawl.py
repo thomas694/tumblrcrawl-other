@@ -141,10 +141,6 @@ def collect_posts(NUMBER, medium):
     counter = 0
     data = []
     
-    # How far back (in months) to go. 0 is no limit.
-    #if len(sys.argv) == 3:
-        #backdate = int(sys.argv[2])
-    
     # Only crawl last number of months
     if MONTHS > 0:
         d = datetime.datetime.today()
