@@ -37,6 +37,8 @@ ARIA2C_VIDEO = []
 YOUTUBE_DL_VIDEO = []
 # Holds embed links that need parsing
 EXTERNAL_VIDEO = []
+# Filter photos
+NEWLIST = []
 
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
@@ -169,18 +171,14 @@ def collect_posts(NUMBER, medium):
     
 def aria_photo_job(url_list):
     manifest_name = sys.argv[1] + "_aria_photo_manifest"
-    # Not interested in GIFs
-    newlist = [ x for x in url_list if x.find(".gif") == -1]
-    # Remove duplicates
-    newlist = list(set(newlist))
     
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
-        for s in newlist:
+        for s in url_list:
             f.write(s + '\n')
     
     # Run aria2c to do the work
-    subprocess.call(["aria2c", "-j6", "-i", manifest_name, "--console-log-level=warn", "-c", "-d", sys.argv[1]])
+    subprocess.call(["aria2c", "-j6", "-i", manifest_name, "--console-log-level=warn", "-c", "-d", sys.argv[1] + "/photo"])
     
     # Cleanup
     os.remove(manifest_name)
@@ -196,7 +194,7 @@ def aria_video_job(url_list):
     subprocess.call(["aria2c", "-j4", "-i", manifest_name,
                      "--console-log-level=warn",
                      "--summary-interval=0",
-                     "-c", "-d", sys.argv[1]])
+                     "-c", "-d", sys.argv[1] + "/video"])
     
     # Cleanup
     os.remove(manifest_name)
@@ -209,7 +207,7 @@ def ytdl_video_job(url_list):
             f.write(s + '\n')
     
     # Output format string to save in sub-directory
-    outstring = sys.argv[1] + "/%(title)s-%(id)s.%(ext)s"
+    outstring = sys.argv[1] + "/video/%(title)s-%(id)s.%(ext)s"
     # Run ytdl to do the work
     subprocess.call(["youtube-dl", "-a", manifest_name, "-i", "-o", outstring])
     
@@ -255,7 +253,13 @@ if __name__ == "__main__":
         process_external_sites()
     
     if PHOTO_LIST:
-        aria_photo_job(PHOTO_LIST)
+        # Not interested in GIFs
+        NEWLIST = [ x for x in PHOTO_LIST if x.find(".gif") == -1]
+        # Remove duplicates
+        NEWLIST = list(set(NEWLIST))
+        # Print some info
+        print("Starting download of {0} photos.".format(len(NEWLIST)))
+        aria_photo_job(NEWLIST)
     
     if ARIA2C_VIDEO:
         aria_video_job(ARIA2C_VIDEO)
@@ -264,4 +268,4 @@ if __name__ == "__main__":
         ytdl_video_job(YOUTUBE_DL_VIDEO)
     
     vids = len(ARIA2C_VIDEO) + len(YOUTUBE_DL_VIDEO)
-    print("Collected {0} photos and {1} videos.".format(len(PHOTO_LIST), vids))
+    print("Collected {0} photos and {1} videos.".format(len(NEWLIST), vids))
