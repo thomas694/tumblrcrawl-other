@@ -28,19 +28,24 @@ import datetime
 import datedelta
 import subprocess
 import re
+import signal
+import glob
 
 # Containers to hold filenames
 PHOTO_LIST = []
 ARIA2C_VIDEO = []
 YOUTUBE_DL_VIDEO = []
+# Holds embed links that need parsing
 EXTERNAL_VIDEO = []
 
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
 
 # Photos, videos or both? 0 = both, 1 = photos, 2 = videos
-WANTED = 2
+WANTED = 0
 
+# Limit crawl to this number of months
+MONTHS = 0
 # Regex to filter video filenames
 pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
 
@@ -86,8 +91,6 @@ def add_to_list(xmldata, beginning, medium):
                             ARIA2C_VIDEO.append(video_url)
                     except:
                         EXTERNAL_VIDEO.append(posts['video-source'])
-                        #if "instagram" in video_url:
-                            #print("DEBUG " + video_url)
                 else:
                     flag=False
                 
@@ -116,10 +119,13 @@ def parse_instagram(embedded):
         sys.stderr.write(e.reason + '\n')
         return
     
-    data = response.read().decode("UTF-8")
-    m = re.search('og:video" (.+?)>', data, re.DOTALL)
-    n = m.group(0).split('"')
-    ARIA2C_VIDEO.append(n[2])
+    try:
+        data = response.read().decode("UTF-8")
+        m = re.search('og:video" (.+?)>', data, re.DOTALL)
+        n = m.group(0).split('"')
+        ARIA2C_VIDEO.append(n[2])
+    except:
+        print("Didn't find Instagram video link")
 
 def process_external_sites():
     for links in EXTERNAL_VIDEO:
@@ -129,20 +135,20 @@ def process_external_sites():
             parse_instagram(links)
 
 def collect_posts(NUMBER, medium):
-    backdate = 0
+    #backdate = 0
     proceed = True
     offset = 0
     counter = 0
     data = []
     
     # How far back (in months) to go. 0 is no limit.
-    if len(sys.argv) == 3:
-        backdate = int(sys.argv[2])
+    #if len(sys.argv) == 3:
+        #backdate = int(sys.argv[2])
     
     # Only crawl last number of months
-    if backdate > 0:
+    if MONTHS > 0:
         d = datetime.datetime.today()
-        r = d - datedelta.datedelta(months=int(backdate))
+        r = d - datedelta.datedelta(months=MONTHS)
         beginning = r.strftime("%Y-%m-%d")
     else:
         beginning = "2012-01-01"
@@ -166,54 +172,81 @@ def collect_posts(NUMBER, medium):
     
     
 def aria_photo_job(url_list):
+    manifest_name = sys.argv[1] + "_aria_photo_manifest"
     # Not interested in GIFs
     newlist = [ x for x in url_list if x.find(".gif") == -1]
     # Remove duplicates
     newlist = list(set(newlist))
     
     # Write a manifest for aria2c
-    with open("manifest", 'w') as f:
+    with open(manifest_name, 'w') as f:
         for s in newlist:
             f.write(s + '\n')
     
     # Run aria2c to do the work
-    subprocess.call(["aria2c", "-j6", "-i", "manifest", "-s1", "-c", "-d", sys.argv[1]])
+    subprocess.call(["aria2c", "-j6", "-i", manifest_name, "--console-log-level=warn", "-c", "-d", sys.argv[1]])
     
     # Cleanup
-    os.remove("manifest")
+    os.remove(manifest_name)
 
 def aria_video_job(url_list):
+    manifest_name = sys.argv[1] + "_aria_video_manifest"
     # Write a manifest for aria2c
-    with open("manifest", 'w') as f:
+    with open(manifest_name, 'w') as f:
         for s in url_list:
             f.write(s + '\n')
     
     # Run aria2c to do the work
-    subprocess.call(["aria2c", "-j4", "-i", "manifest", "-s1", "-c", "-d", sys.argv[1]])
+    subprocess.call(["aria2c", "-j4", "-i", manifest_name,
+                     "--console-log-level=warn",
+                     "--summary-interval=0",
+                     "-c", "-d", sys.argv[1]])
     
     # Cleanup
-    os.remove("manifest")
+    os.remove(manifest_name)
 
 def ytdl_video_job(url_list):
+    manifest_name = sys.argv[1] + "_ytdl_video_manifest"
     # Write a manifest for aria2c
-    with open("manifest", 'w') as f:
+    with open(manifest_name, 'w') as f:
         for s in url_list:
             f.write(s + '\n')
     
     # Output format string to save in sub-directory
     outstring = sys.argv[1] + "/%(title)s-%(id)s.%(ext)s"
     # Run ytdl to do the work
-    subprocess.call(["youtube-dl", "-a", "manifest", "-i", "-o", outstring])
+    subprocess.call(["youtube-dl", "-a", manifest_name, "-i", "-o", outstring])
     
     # Cleanup
-    os.remove("manifest")
+    os.remove(manifest_name)
 
+def sigint_handler(signal, frame):
+    cleanup = glob.glob("*manifest")
+    for i in cleanup:
+        os.remove(i)
+    
+    sys.exit(1)
 
 if __name__ == "__main__":
-    sites = None
+    # Catch keyboard interrupts
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGQUIT, sigint_handler)
     
+    # Basic name check
     if len(sys.argv) < 2:
-        sys.stderr.write("I need a tumblr name to crawl\n")
+        print("I need a tumblr name to crawl\n")
+        sys.exit(1)
+    
+    # Check optional args
+    u = sys.argv[2:]
+    for i in u:
+        try:
+            MONTHS = int(i)
+        except:
+            if i == 'v':
+                WANTED = 2
+            elif i == 'p':
+                WANTED = 1
     
     if WANTED != 2:
         collect_posts(NUMBER, "photo")
@@ -225,20 +258,14 @@ if __name__ == "__main__":
     if EXTERNAL_VIDEO:
         process_external_sites()
     
-    for i in ARIA2C_VIDEO:
-        print(i)
-    #for i in YOUTUBE_DL_VIDEO:
-        #print("YTDL")
-        #print(i)
-    
-    
     if PHOTO_LIST:
         aria_photo_job(PHOTO_LIST)
     
-    #if ARIA2C_VIDEO:
-        #aria_video_job(ARIA2C_VIDEO)
+    if ARIA2C_VIDEO:
+        aria_video_job(ARIA2C_VIDEO)
     
-    #if YOUTUBE_DL_VIDEO:
-        #ytdl_video_job(YOUTUBE_DL_VIDEO)
-    print(len(ARIA2C_VIDEO))
-    print(len(YOUTUBE_DL_VIDEO))
+    if YOUTUBE_DL_VIDEO:
+        ytdl_video_job(YOUTUBE_DL_VIDEO)
+    
+    vids = len(ARIA2C_VIDEO) + len(YOUTUBE_DL_VIDEO)
+    print("Collected {0} photos and {1} videos.".format(len(PHOTO_LIST), vids))
