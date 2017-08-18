@@ -33,6 +33,7 @@ import re
 PHOTO_LIST = []
 ARIA2C_VIDEO = []
 YOUTUBE_DL_VIDEO = []
+EXTERNAL_VIDEO = []
 
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
@@ -84,7 +85,9 @@ def add_to_list(xmldata, beginning, medium):
                         else:
                             ARIA2C_VIDEO.append(video_url)
                     except:
-                        YOUTUBE_DL_VIDEO.append(posts['video-source'])
+                        EXTERNAL_VIDEO.append(posts['video-source'])
+                        #if "instagram" in video_url:
+                            #print("DEBUG " + video_url)
                 else:
                     flag=False
                 
@@ -93,6 +96,37 @@ def add_to_list(xmldata, beginning, medium):
     
     xmldata = []
     return flag
+
+def parse_instagram(embedded):
+    print("Parsing instagram link")
+    if embedded.startswith('<iframe'):
+        for segment in embedded.split('"'):
+            if segment.startswith('//www'):
+                insta_page = ("https:" + segment[:-6])
+                break
+            elif segment.startswith('//instagram'):
+                insta_page = ("https://www." + segment[2:-6])
+                break
+    else:
+        insta_page = embedded
+    
+    try:
+        response = urllib.request.urlopen(insta_page)
+    except urllib.error.URLError as e:
+        sys.stderr.write(e.reason + '\n')
+        return
+    
+    data = response.read().decode("UTF-8")
+    m = re.search('og:video" (.+?)>', data, re.DOTALL)
+    n = m.group(0).split('"')
+    ARIA2C_VIDEO.append(n[2])
+
+def process_external_sites():
+    for links in EXTERNAL_VIDEO:
+        if "youtube" in links:
+            YOUTUBE_DL_VIDEO.append(links)
+        elif "instagram" in links:
+            parse_instagram(links)
 
 def collect_posts(NUMBER, medium):
     backdate = 0
@@ -168,7 +202,7 @@ def ytdl_video_job(url_list):
     
     # Output format string to save in sub-directory
     outstring = sys.argv[1] + "/%(title)s-%(id)s.%(ext)s"
-    # Run aria2c to do the work
+    # Run ytdl to do the work
     subprocess.call(["youtube-dl", "-a", "manifest", "-i", "-o", outstring])
     
     # Cleanup
@@ -187,19 +221,24 @@ if __name__ == "__main__":
     if WANTED != 1:
         collect_posts(NUMBER, "video")
     
-    #for i in ARIA2C_VIDEO:
+    
+    if EXTERNAL_VIDEO:
+        process_external_sites()
+    
+    for i in ARIA2C_VIDEO:
+        print(i)
+    #for i in YOUTUBE_DL_VIDEO:
+        #print("YTDL")
         #print(i)
     
-    #for i in YOUTUBE_DL_VIDEO:
-        #print(i)
     
     if PHOTO_LIST:
         aria_photo_job(PHOTO_LIST)
     
-    if ARIA2C_VIDEO:
-        aria_video_job(ARIA2C_VIDEO)
+    #if ARIA2C_VIDEO:
+        #aria_video_job(ARIA2C_VIDEO)
     
-    if YOUTUBE_DL_VIDEO:
-        ytdl_video_job(YOUTUBE_DL_VIDEO)
+    #if YOUTUBE_DL_VIDEO:
+        #ytdl_video_job(YOUTUBE_DL_VIDEO)
     print(len(ARIA2C_VIDEO))
     print(len(YOUTUBE_DL_VIDEO))
