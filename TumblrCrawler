@@ -1,0 +1,47 @@
+#!/usr/bin/python
+
+from PyQt5.QtWidgets import (QWidget, QPushButton, QApplication,
+                             QHBoxLayout, QVBoxLayout, QLabel)
+from PyQt5.QtCore import QCoreApplication, pyqtSlot
+from PyQt5.QtGui import QIcon
+import sys
+
+
+class Form(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.buildForm()
+    
+    def buildForm(self):
+        crawlButton = QPushButton("Crawl")
+        crawlButton.clicked.connect(self.begin_crawl)
+        quitButton = QPushButton("Quit")
+        quitButton.clicked.connect(QCoreApplication.instance().quit)
+        
+        hbox1 = QHBoxLayout()
+        hbox1.addStretch(1)
+        hbox1.addWidget(crawlButton)
+        hbox1.addWidget(quitButton)
+        
+        titleLabel = QLabel("TumblrCrawler")
+        titleLabel.setStyleSheet("QLabel {color: blue; font-family: Source Sans Pro,sans; font-size: 18pt; font-weight: bold;}")
+        
+        vbox0 = QVBoxLayout()
+        vbox0.addWidget(titleLabel)
+        vbox0.addStretch(1)
+        vbox0.addLayout(hbox1)
+        self.setLayout(vbox0)
+        
+        self.setWindowTitle("TumblrCrawler")
+        self.setWindowIcon(QIcon('tumblrcrawl.png'))
+        self.show()
+    
+    @pyqtSlot()
+    def begin_crawl(self):
+        self.setGeometry(200,200,200,200)
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    f = Form()
+    sys.exit(app.exec_())
