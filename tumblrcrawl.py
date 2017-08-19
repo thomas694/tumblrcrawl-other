@@ -21,6 +21,7 @@
 
 import sys
 import os
+import os.path
 import urllib.request
 import urllib.error
 import xmltodict
@@ -39,15 +40,15 @@ YOUTUBE_DL_VIDEO = []
 EXTERNAL_VIDEO = []
 # Filter photos
 NEWLIST = []
-
+# Where to save - current directory if run from CLI 
+SAVE_PATH = "./"
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
-
 # Photos, videos or both? 0 = both, 1 = photos, 2 = videos
 WANTED = 0
-
 # Limit crawl to this number of months
 MONTHS = 0
+
 # Regex to filter video filenames
 pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
 
@@ -170,7 +171,7 @@ def collect_posts(NUMBER, medium):
     
     
 def aria_photo_job(url_list):
-    manifest_name = sys.argv[1] + "_aria_photo_manifest"
+    manifest_name = SAVE_PATH +  "/aria_photo_manifest"
     
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
@@ -178,13 +179,19 @@ def aria_photo_job(url_list):
             f.write(s + '\n')
     
     # Run aria2c to do the work
-    subprocess.call(["aria2c", "-j6", "-i", manifest_name, "--console-log-level=warn", "-c", "-d", sys.argv[1] + "/photo"])
+    subprocess.call(["aria2c", "-j6", "-i", manifest_name,
+                     "--console-log-level=warn",
+                     "--summary-interval=0",
+                     "--download-result=hide",
+                     "-c", "-d", SAVE_PATH  + "/photo"])
+    print()
     
     # Cleanup
     os.remove(manifest_name)
 
 def aria_video_job(url_list):
-    manifest_name = sys.argv[1] + "_aria_video_manifest"
+    manifest_name = SAVE_PATH + "/aria_video_manifest"
+    
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
         for s in url_list:
@@ -194,20 +201,22 @@ def aria_video_job(url_list):
     subprocess.call(["aria2c", "-j4", "-i", manifest_name,
                      "--console-log-level=warn",
                      "--summary-interval=0",
-                     "-c", "-d", sys.argv[1] + "/video"])
+                     "--download-result=hide",
+                     "-c", "-d", SAVE_PATH + "/video"])
+    print()
     
     # Cleanup
     os.remove(manifest_name)
 
 def ytdl_video_job(url_list):
-    manifest_name = sys.argv[1] + "_ytdl_video_manifest"
+    manifest_name = SAVE_PATH + "/ytdl_video_manifest"
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
         for s in url_list:
             f.write(s + '\n')
     
     # Output format string to save in sub-directory
-    outstring = sys.argv[1] + "/video/%(title)s-%(id)s.%(ext)s"
+    outstring = SAVE_PATH + "/video/%(title)s-%(id)s.%(ext)s"
     # Run ytdl to do the work
     subprocess.call(["youtube-dl", "-a", manifest_name, "-i", "-o", outstring])
     
@@ -215,10 +224,11 @@ def ytdl_video_job(url_list):
     os.remove(manifest_name)
 
 def sigint_handler(signal, frame):
-    cleanup = glob.glob("*manifest")
+    cleanup = glob.glob(SAVE_PATH + "/*manifest")
     for i in cleanup:
         os.remove(i)
     
+    print("\n\033[31mTerminated.\033[0m")
     sys.exit(1)
 
 if __name__ == "__main__":
@@ -241,13 +251,29 @@ if __name__ == "__main__":
                 WANTED = 2
             elif i == 'p':
                 WANTED = 1
+            elif i.startswith("X-DIR"):
+                SAVE_PATH = (i[5:])
+    
+    
+    # Basic sanity check
+    if not os.path.exists(SAVE_PATH):
+        print("Given path doesn't exist. Terminating.")
+        exit(1)
+    
+    print("\n\033[32m---<Tumblr Crawl>--<Ctrl+C to abort>---\033[0m")
+    SAVE_PATH = os.path.join(SAVE_PATH, sys.argv[1])
+    
+    try:
+        os.makedirs(SAVE_PATH, exist_ok=True)
+        print("\033[33mSaving to: {0}\033[0m".format(SAVE_PATH))
+    except OSError as e:
+        print("\033[31mTerminating> {0}\033[0m".format(e))
     
     if WANTED != 2:
         collect_posts(NUMBER, "photo")
     
     if WANTED != 1:
         collect_posts(NUMBER, "video")
-    
     
     if EXTERNAL_VIDEO:
         process_external_sites()
@@ -256,16 +282,18 @@ if __name__ == "__main__":
         # Not interested in GIFs
         NEWLIST = [ x for x in PHOTO_LIST if x.find(".gif") == -1]
         # Remove duplicates
-        NEWLIST = list(set(NEWLIST))
+        # NEWLIST = list(set(NEWLIST))
         # Print some info
-        print("Starting download of {0} photos.".format(len(NEWLIST)))
+        print("\033[33mStarting download of {0} photos.\033[0m".format(len(NEWLIST)))
         aria_photo_job(NEWLIST)
     
     if ARIA2C_VIDEO:
+        print("\033[33mStarting download of {0} videos.\033[0m".format(len(ARIA2C_VIDEO)))
         aria_video_job(ARIA2C_VIDEO)
     
     if YOUTUBE_DL_VIDEO:
+        print("\033[33mStarting download of {0} external videos.\033[0m".format(len(YOUTUBE_DL_VIDEO)))
         ytdl_video_job(YOUTUBE_DL_VIDEO)
     
     vids = len(ARIA2C_VIDEO) + len(YOUTUBE_DL_VIDEO)
-    print("Collected {0} photos and {1} videos.".format(len(NEWLIST), vids))
+    print("\033[34mFinished processing {0} photos and {1} videos.\033[0m\n".format(len(NEWLIST), vids))
