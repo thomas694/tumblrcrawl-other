@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 '''
     tumblrcrawl.py - download images and video from tumblr sites
@@ -48,6 +48,8 @@ NUMBER = 50
 WANTED = 0
 # Limit crawl to this number of months
 MONTHS = 0
+# Hold terminal open (for use with frontend)
+HOLD = False
 
 # Regex to filter video filenames
 pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
@@ -253,6 +255,8 @@ if __name__ == "__main__":
                 WANTED = 1
             elif i.startswith("X-DIR"):
                 SAVE_PATH = (i[5:])
+            elif i == 'h':
+                HOLD = True
     
     
     # Basic sanity check
@@ -297,3 +301,7 @@ if __name__ == "__main__":
     
     vids = len(ARIA2C_VIDEO) + len(YOUTUBE_DL_VIDEO)
     print("\033[34mFinished processing {0} photos and {1} videos.\033[0m\n".format(len(NEWLIST), vids))
+    
+    # Need to hold terminal open if spawned from Frontend.
+    if HOLD:
+        input("Press [Enter] to close...")

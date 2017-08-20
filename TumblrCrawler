@@ -30,7 +30,7 @@ class Form(QWidget):
         self.hbox1.addWidget(self.quitButton)
         
         self.titleLabel = QLabel("TumblrCrawler")
-        self.titleLabel.setStyleSheet("QLabel {color: blue; font-family: Source Sans Pro,sans; font-size: 18pt; font-weight: bold;}")
+        self.titleLabel.setStyleSheet("QLabel {color: #3daee9; font-family: Source Sans Pro,sans; font-size: 18pt; font-weight: bold;}")
         
         self.siteLabel = QLabel("Tumblr Name")
         self.siteLabel.setToolTip("Name of the site without <i>.tumlr.com</i>.")
@@ -89,7 +89,7 @@ class Form(QWidget):
         self.setLayout(self.vbox0)
         
         self.setWindowTitle("TumblrCrawler")
-        self.setWindowIcon(QIcon('tumblrcrawl.png'))
+        self.setWindowIcon(QIcon('/usr/share/icons/hicolor/256x256/apps/tumblrcrawl.png'))
         self.show()
     
     @pyqtSlot()

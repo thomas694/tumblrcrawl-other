@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=TumblrCrawler
+GenericName=Tumblr Mass Downloader
+Comment=Download Tumblr media quickly and easily.
+Exec=TumblrCrawler
+Icon=tumblrcrawl
+Terminal=false
+Type=Application
+Categories=Network;
+StartupNotify=false

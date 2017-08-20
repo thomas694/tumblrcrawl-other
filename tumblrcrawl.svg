@@ -9,13 +9,16 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="793.70081"
-   height="1122.5197"
-   viewBox="0 0 210 297"
+   width="276"
+   height="276"
+   viewBox="0 0 73.024998 73.025002"
    version="1.1"
    id="svg8"
    inkscape:version="0.92.1 r"
-   sodipodi:docname="tumblrcrawl.svg">
+   sodipodi:docname="tumblrcrawl.svg"
+   inkscape:export-filename="/home/mark/projects/tumblrcrawl/tumblrcrawl.png"
+   inkscape:export-xdpi="89.04348"
+   inkscape:export-ydpi="89.04348">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -26,8 +29,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.0603774"
-     inkscape:cx="328.00129"
-     inkscape:cy="844.14934"
+     inkscape:cx="149.42986"
+     inkscape:cy="151.29215"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -37,7 +40,11 @@
      inkscape:window-height="1137"
      inkscape:window-x="0"
      inkscape:window-y="0"
-     inkscape:window-maximized="1" />
+     inkscape:window-maximized="1"
+     fit-margin-top="10"
+     fit-margin-left="10"
+     fit-margin-right="10"
+     fit-margin-bottom="10" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -53,13 +60,12 @@
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     transform="translate(-47.247023,-40.656535)">
     <g
-       id="g4561"
-       inkscape:export-xdpi="96"
-       inkscape:export-ydpi="96">
+       id="g4587">
       <rect
-         ry="17.962191"
+         ry="13.981324"
          y="43.302368"
          x="49.892857"
          height="67.73333"

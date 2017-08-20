@@ -1,9 +1,12 @@
-# tumblrcrawl
-Download images and videos from  Tumblr sites. It will also grab embedded video from YouTube, Vimeo and Instagram. Requires aria2c and youtube-dl.
+# TumblrCrawler
+Download images and videos from  Tumblr sites quickly and easily. Will also grab embedded video from YouTube, Vimeo and Instagram. Requires aria2c and youtube-dl. The GUI requires PyQt5.
 ## Installation
-Copy tumblrcrawl.py into your $PATH and set it executable (chmod -v 755 tumblrcrawl.py)
-## Usage
+```
+sudo ./install.sh
+```
 
+## Usage
+The GUI is self-explanatory; read the tooltips. You can also run the CLI version in a terminal:
 ```
 tumblrcrawl.py tumblrname [months] [p] [v]
 ```
@@ -13,4 +16,4 @@ tumblrname (required) is the site you want to crawl. Optional arguments are:
 2. p - only grab photos
 3. v - only grab videos
 
-Files will be written to a sub-directory named from the Tumblr site.
+Files will be written into a sub-directory from the current working directory.
