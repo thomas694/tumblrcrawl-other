@@ -1,36 +1,92 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from PyQt5.QtWidgets import (QWidget, QPushButton, QApplication,
-                             QHBoxLayout, QVBoxLayout, QLabel)
+                             QHBoxLayout, QVBoxLayout, QLabel,
+                             QLineEdit, QSpinBox, QGroupBox,
+                             QRadioButton, QToolButton, QFileDialog,
+                             QMessageBox)
 from PyQt5.QtCore import QCoreApplication, pyqtSlot
 from PyQt5.QtGui import QIcon
 import sys
+import os.path
+import subprocess
+from shutil import which
 
 
 class Form(QWidget):
     def __init__(self):
         super().__init__()
-        self.buildForm()
+        #self.buildForm()
     
-    def buildForm(self):
-        crawlButton = QPushButton("Crawl")
-        crawlButton.clicked.connect(self.begin_crawl)
-        quitButton = QPushButton("Quit")
-        quitButton.clicked.connect(QCoreApplication.instance().quit)
+    #def buildForm(self):
+        self.crawlButton = QPushButton("Crawl")
+        self.crawlButton.clicked.connect(self.begin_crawl)
+        self.quitButton = QPushButton("Quit")
+        self.quitButton.clicked.connect(QCoreApplication.instance().quit)
         
-        hbox1 = QHBoxLayout()
-        hbox1.addStretch(1)
-        hbox1.addWidget(crawlButton)
-        hbox1.addWidget(quitButton)
+        self.hbox1 = QHBoxLayout()
+        self.hbox1.addStretch(1)
+        self.hbox1.addWidget(self.crawlButton)
+        self.hbox1.addWidget(self.quitButton)
         
-        titleLabel = QLabel("TumblrCrawler")
-        titleLabel.setStyleSheet("QLabel {color: blue; font-family: Source Sans Pro,sans; font-size: 18pt; font-weight: bold;}")
+        self.titleLabel = QLabel("TumblrCrawler")
+        self.titleLabel.setStyleSheet("QLabel {color: blue; font-family: Source Sans Pro,sans; font-size: 18pt; font-weight: bold;}")
         
-        vbox0 = QVBoxLayout()
-        vbox0.addWidget(titleLabel)
-        vbox0.addStretch(1)
-        vbox0.addLayout(hbox1)
-        self.setLayout(vbox0)
+        self.siteLabel = QLabel("Tumblr Name")
+        self.siteLabel.setToolTip("Name of the site without <i>.tumlr.com</i>.")
+        self.siteEdit = QLineEdit()
+        self.suffixLabel = QLabel("<i>.tumblr.com</i>")
+        
+        self.hbox2 = QHBoxLayout()
+        self.hbox2.addWidget(self.siteLabel)
+        self.hbox2.addWidget(self.siteEdit)
+        self.hbox2.addWidget(self.suffixLabel)
+        
+        self.monthLabel = QLabel("Months")
+        self.monthLabel.setToolTip("Only go back this many months. 0 will collect the whole Tumblr.")
+        self.monthSpin = QSpinBox()
+        self.monthSpin.setRange(0, 48)
+        self.monthSpin.setValue(0)
+        
+        self.wantedGroup = QGroupBox("What to get")
+        self.wantedGroup.setToolTip("Get photos and videos, just photos, or just videos")
+        self.allRadio = QRadioButton("Both")
+        self.photoRadio = QRadioButton("Photos")
+        self.videoRadio = QRadioButton("Videos")
+        self.allRadio.setChecked(True)
+        self.hboxGroup = QHBoxLayout()
+        self.hboxGroup.addWidget(self.allRadio)
+        self.hboxGroup.addStretch(1)
+        self.hboxGroup.addWidget(self.photoRadio)
+        self.hboxGroup.addStretch(1)
+        self.hboxGroup.addWidget(self.videoRadio)
+        self.wantedGroup.setLayout(self.hboxGroup)
+        
+        self.hbox3 = QHBoxLayout()
+        self.hbox3.addWidget(self.monthLabel)
+        self.hbox3.addWidget(self.monthSpin)
+        self.hbox3.addWidget(self.wantedGroup)
+        
+        self.destLabel = QLabel("Save Path")
+        self.destEdit = QLineEdit(os.path.expanduser("~") + "/Downloads")
+        self.destTButton = QToolButton()
+        
+        self.hbox4 = QHBoxLayout()
+        self.hbox4.addWidget(self.destLabel)
+        self.hbox4.addWidget(self.destEdit)
+        self.hbox4.addWidget(self.destTButton)
+        self.toolIcon = QIcon.fromTheme("folder")
+        self.destTButton.setIcon(self.toolIcon)
+        self.destTButton.clicked.connect(self.getDownloadPath)
+        
+        self.vbox0 = QVBoxLayout()
+        self.vbox0.addWidget(self.titleLabel)
+        self.vbox0.addStretch(1)
+        self.vbox0.addLayout(self.hbox2)
+        self.vbox0.addLayout(self.hbox3)
+        self.vbox0.addLayout(self.hbox4)
+        self.vbox0.addLayout(self.hbox1)
+        self.setLayout(self.vbox0)
         
         self.setWindowTitle("TumblrCrawler")
         self.setWindowIcon(QIcon('tumblrcrawl.png'))
@@ -38,7 +94,51 @@ class Form(QWidget):
     
     @pyqtSlot()
     def begin_crawl(self):
-        self.setGeometry(200,200,200,200)
+        if self.siteEdit.text() == "":
+            QMessageBox.warning(self, "Missing Name", "You must enter a site name to crawl.")
+            return 
+        if not os.path.exists(self.destEdit.text()):
+            QMessageBox.warning(self, "Bad Directory", "The given save path cannot be found.")
+            return
+        
+        if not which('tumblrcrawl.py'):
+            QMessageBox.critical(self, "Crawler Not Found", "tumblrcrawl.py is missing. Check your installation.")
+            return 
+        
+        if which('konsole'):
+            terminal = 'konsole'
+        elif which('urxvt'):
+            terminal = 'urxvt'
+        elif which('xterm'):
+            terminal = 'xterm'
+        else:
+            QMessageBox.critical(self, "No Terminal", "No usable terminals were found.")
+            return
+        
+        cmd = [terminal]
+        cmd.append("-title")
+        cmd.append("tumblrcrawl")
+        cmd.append("-e")
+        cmd.append("tumblrcrawl.py")
+        cmd.append(self.siteEdit.text())
+        cmd.append(str(self.monthSpin.value()))
+        
+        if self.photoRadio.isChecked():
+            cmd.append("p")
+        elif self.videoRadio.isChecked():
+            cmd.append("v")
+        
+        cmd.append("X-DIR" + self.destEdit.text())
+        cmd.append("h")
+        
+        subprocess.Popen(cmd)
+    
+    @pyqtSlot()
+    def getDownloadPath(self):
+        where = QFileDialog.getExistingDirectory(self, "Choose", self.destEdit.text())
+        #where.setFileMode(QFileDialog.DirectoryOnly)
+        if where:
+            self.destEdit.setText(where)
 
 
 if __name__ == '__main__':
