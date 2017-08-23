@@ -1,5 +1,6 @@
 # TumblrCrawler
-Download images and videos from  Tumblr sites quickly and easily. Will also grab embedded video from YouTube, Vimeo and Instagram. Requires aria2c and youtube-dl. The GUI requires PyQt5.
+Download images and videos from  Tumblr sites quickly and easily. Will also grab embedded video from YouTube, Vimeo and Instagram. Requires PyQt5, aria2c and youtube-dl.
+![Screenshot](tc.png)
 ## Installation
 ```
 sudo ./install.sh
