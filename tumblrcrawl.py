@@ -33,13 +33,11 @@ import signal
 import glob
 
 # Containers to hold filenames
-PHOTO_LIST = []
-ARIA2C_VIDEO = []
-YOUTUBE_DL_VIDEO = []
+PHOTO_LIST = set()
+ARIA2C_VIDEO = set()
+YOUTUBE_DL_VIDEO = set()
 # Holds embed links that need parsing
-EXTERNAL_VIDEO = []
-# Filter photos
-NEWLIST = []
+EXTERNAL_VIDEO = set()
 # Where to save - current directory if run from CLI 
 SAVE_PATH = "./"
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
@@ -67,9 +65,12 @@ def add_to_list(xmldata, beginning, medium):
                 if date_of_post > beginning:
                     try:
                         for sets in posts['photoset']['photo']:
-                            PHOTO_LIST.append(sets['photo-url'][0]['#text'])
+                            # Filter out unwanted gifs
+                            if not sets['photo-url'][0]['#text'].endswith('gif'):
+                                PHOTO_LIST.add(sets['photo-url'][0]['#text'])
                     except:
-                        PHOTO_LIST.append(posts['photo-url'][0]['#text'])
+                        if not posts['photo-url'][0]['#text'].endswith('gif'):
+                            PHOTO_LIST.add(posts['photo-url'][0]['#text'])
                 else:
                     flag = False
         except:
@@ -89,13 +90,15 @@ def add_to_list(xmldata, beginning, medium):
                             video_url = video_url[:-4]
                         
                         if "youtube" in video_url:
-                            YOUTUBE_DL_VIDEO.append(video_url)
+                            YOUTUBE_DL_VIDEO.add(video_url)
+                        elif "youtu.be" in video_url:
+                            YOUTUBE_DL_VIDEO.add(video_url)
                         elif "vimeo" in video_url:
-                            YOUTUBE_DL_VIDEO.append(video_url)
+                            YOUTUBE_DL_VIDEO.add(video_url)
                         else:
-                            ARIA2C_VIDEO.append(video_url)
+                            ARIA2C_VIDEO.add(video_url)
                     except:
-                        EXTERNAL_VIDEO.append(posts['video-source'])
+                        EXTERNAL_VIDEO.add(posts['video-source'])
                 else:
                     flag=False
                 
@@ -128,14 +131,17 @@ def parse_instagram(embedded):
         data = response.read().decode("UTF-8")
         m = re.search('og:video" (.+?)>', data, re.DOTALL)
         n = m.group(0).split('"')
-        ARIA2C_VIDEO.append(n[2])
+        ARIA2C_VIDEO.add(n[2])
     except:
         print("Didn't find Instagram video link")
 
 def process_external_sites():
     for links in EXTERNAL_VIDEO:
+        print(links)
         if "youtube" in links:
-            YOUTUBE_DL_VIDEO.append(links)
+            YOUTUBE_DL_VIDEO.add(links)
+        elif "youtu.be" in links:
+            YOUTUBE_DL_VIDEO.add(links)
         elif "instagram" in links:
             parse_instagram(links)
 
@@ -283,13 +289,8 @@ if __name__ == "__main__":
         process_external_sites()
     
     if PHOTO_LIST:
-        # Not interested in GIFs
-        NEWLIST = [ x for x in PHOTO_LIST if x.find(".gif") == -1]
-        # Remove duplicates
-        # NEWLIST = list(set(NEWLIST))
-        # Print some info
-        print("\033[33mStarting download of {0} photos.\033[0m".format(len(NEWLIST)))
-        aria_photo_job(NEWLIST)
+        print("\033[33mStarting download of {0} photos.\033[0m".format(len(PHOTO_LIST)))
+        aria_photo_job(PHOTO_LIST)
     
     if ARIA2C_VIDEO:
         print("\033[33mStarting download of {0} videos.\033[0m".format(len(ARIA2C_VIDEO)))
@@ -300,7 +301,7 @@ if __name__ == "__main__":
         ytdl_video_job(YOUTUBE_DL_VIDEO)
     
     vids = len(ARIA2C_VIDEO) + len(YOUTUBE_DL_VIDEO)
-    print("\033[34mFinished processing {0} photos and {1} videos.\033[0m\n".format(len(NEWLIST), vids))
+    print("\033[33mFinished processing {0} photos and {1} videos.\033[0m\n".format(len(PHOTO_LIST), vids))
     
     # Need to hold terminal open if spawned from Frontend.
     if HOLD:
