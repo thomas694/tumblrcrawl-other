@@ -39,7 +39,7 @@ YOUTUBE_DL_VIDEO = set()
 # Holds embed links that need parsing
 EXTERNAL_VIDEO = set()
 # Where to save - current directory if run from CLI 
-SAVE_PATH = "./"
+SAVE_PATH = os.getcwd()
 # Number of posts to retrieve on each call to Tumblr (default is 20, max is 50)
 NUMBER = 50
 # Photos, videos or both? 0 = both, 1 = photos, 2 = videos
@@ -179,7 +179,14 @@ def collect_posts(NUMBER, medium):
     
     
 def aria_photo_job(url_list):
-    manifest_name = SAVE_PATH +  "/aria_photo_manifest"
+    manifest_name = os.path.join(SAVE_PATH,  "aria_photo_manifest")
+    save_path_photos = os.path.join(SAVE_PATH, "photos")
+    
+    try:
+        os.makedirs(save_path_photos, exist_ok=True)
+    except OSError as e:
+        print("Terminating > {0}".format(e))
+    
     
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
@@ -191,14 +198,20 @@ def aria_photo_job(url_list):
                      "--console-log-level=warn",
                      "--summary-interval=0",
                      "--download-result=hide",
-                     "-c", "-d", SAVE_PATH  + "/photo"])
+                     "-c", "-d", save_path_photos])
     print()
     
     # Cleanup
     os.remove(manifest_name)
 
 def aria_video_job(url_list):
-    manifest_name = SAVE_PATH + "/aria_video_manifest"
+    manifest_name = os.path.join(SAVE_PATH,"aria_video_manifest")
+    save_path_videos = os.path.join(SAVE_PATH, "videos")
+    
+    try:
+        os.makedirs(save_path_videos, exist_ok=True)
+    except OSError as e:
+        print("Terminating > {0}".format(e))
     
     # Write a manifest for aria2c
     with open(manifest_name, 'w') as f:
@@ -210,21 +223,22 @@ def aria_video_job(url_list):
                      "--console-log-level=warn",
                      "--summary-interval=0",
                      "--download-result=hide",
-                     "-c", "-d", SAVE_PATH + "/video"])
+                     "-c", "-d", save_path_videos])
     print()
     
     # Cleanup
     os.remove(manifest_name)
 
 def ytdl_video_job(url_list):
-    manifest_name = SAVE_PATH + "/ytdl_video_manifest"
-    # Write a manifest for aria2c
+    manifest_name = os.path.join(SAVE_PATH, "ytdl_video_manifest")
+    
+    # Write a manifest for ytdl
     with open(manifest_name, 'w') as f:
         for s in url_list:
             f.write(s + '\n')
     
     # Output format string to save in sub-directory
-    outstring = SAVE_PATH + "/video/%(title)s-%(id)s.%(ext)s"
+    outstring = os.path.join(SAVE_PATH, "videos", "%(title)s-%(id)s.%(ext)s")
     # Run ytdl to do the work
     subprocess.call(["youtube-dl", "-a", manifest_name, "-i", "-o", outstring])
     
@@ -232,7 +246,7 @@ def ytdl_video_job(url_list):
     os.remove(manifest_name)
 
 def sigint_handler(signal, frame):
-    cleanup = glob.glob(SAVE_PATH + "/*manifest")
+    cleanup = glob.glob(os.path.join(SAVE_PATH,  "*manifest"))
     for i in cleanup:
         os.remove(i)
     
