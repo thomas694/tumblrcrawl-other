@@ -61,6 +61,8 @@ def add_to_list(xmldata, beginning, medium):
         try:
             for posts in xmldata['tumblr']['posts']['post']:
                 date_of_post = posts['@date-gmt'].split()[0]
+                #print(date_of_post, beginning, date_of_post > beginning)
+                #beginning = "2017-07-26"
                 
                 if date_of_post > beginning:
                     try:
@@ -73,6 +75,7 @@ def add_to_list(xmldata, beginning, medium):
                             PHOTO_LIST.add(posts['photo-url'][0]['#text'])
                 else:
                     flag = False
+                    break
         except:
             flag = False
         
