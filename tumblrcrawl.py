@@ -157,8 +157,8 @@ def collect_posts(NUMBER, medium):
     # Only crawl last number of months
     if MONTHS > 0:
         d = datetime.datetime.today()
-        r = d - datedelta.datedelta(months=MONTHS)
-        beginning = r.strftime("%Y-%m-%d")
+        r = d - datedelta.datedelta(months=MONTHS - 1)
+        beginning = r.strftime("%Y-%m") + "-01"
     else:
         beginning = "2012-01-01"
     
@@ -168,6 +168,9 @@ def collect_posts(NUMBER, medium):
         # Get site info from Tumblr
         tumblr_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
         site_url = tumblr_url.format(sys.argv[1], medium, NUMBER, offset)
+        print(type(beginning))
+        print(beginning)
+        sys.exit(0)
         
         try:
             response = urllib.request.urlopen(site_url)
@@ -255,6 +258,18 @@ def sigint_handler(signal, frame):
     print("\n\033[31mTerminated.\033[0m")
     sys.exit(1)
 
+
+def usage():
+    print("""\033[33m\nUsage: tumblrcrawl.py TumblrName [v] [p] [{num}]\033[36m\n
+   Name is required. If only name is given, tumblrcrawl.py will collect
+   all photos and videos on site. Limit the collection with 
+   the following options:
+     v - videos only
+     p - photos only
+     {num} - (a number) only collect the last {num} number of months\n\033[0m""")
+
+
+# Begin Here -----------------------------------------------------------------------
 if __name__ == "__main__":
     # Catch keyboard interrupts
     signal.signal(signal.SIGINT, sigint_handler)
@@ -262,7 +277,7 @@ if __name__ == "__main__":
     
     # Basic name check
     if len(sys.argv) < 2:
-        print("I need a tumblr name to crawl\n")
+        usage()
         sys.exit(1)
     
     # Check optional args
