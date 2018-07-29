@@ -168,9 +168,6 @@ def collect_posts(NUMBER, medium):
         # Get site info from Tumblr
         tumblr_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
         site_url = tumblr_url.format(sys.argv[1], medium, NUMBER, offset)
-        print(type(beginning))
-        print(beginning)
-        sys.exit(0)
         
         try:
             response = urllib.request.urlopen(site_url)
@@ -266,7 +263,8 @@ def usage():
    the following options:
      v - videos only
      p - photos only
-     {num} - (a number) only collect the last {num} number of months\n\033[0m""")
+     {num} - (a number) only collect the last {num} number of months
+             e.g. current month is 1\n\033[0m""")
 
 
 # Begin Here -----------------------------------------------------------------------
@@ -298,8 +296,7 @@ if __name__ == "__main__":
     
     # Basic sanity check
     if not os.path.exists(SAVE_PATH):
-        print("Given path doesn't exist. Terminating.")
-        exit(1)
+        sys.exit("Given path doesn't exist. Terminating.")
     
     print("\n\033[32m---<Tumblr Crawl>--<Ctrl+C to abort>---\033[0m")
     SAVE_PATH = os.path.join(SAVE_PATH, sys.argv[1])
@@ -309,14 +306,13 @@ if __name__ == "__main__":
     try:
         response = urllib.request.urlopen(check_url)
     except urllib.error.URLError as e:
-            sys.stderr.write(e.reason + '\n')
-            sys.exit(1)
+            sys.exit("\033[31m" + e.reason + "\033[0m" + "\n")
     
     try:
         os.makedirs(SAVE_PATH, exist_ok=True)
         print("\033[33mSaving to: {0}\033[0m".format(SAVE_PATH))
     except OSError as e:
-        print("\033[31mTerminating> {0}\033[0m".format(e))
+        sys.exit("\033[31mTerminating> {0}\033[0m".format(e))
     
     if WANTED != 2:
         collect_posts(NUMBER, "photo")
