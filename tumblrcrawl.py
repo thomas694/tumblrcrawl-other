@@ -75,7 +75,6 @@ def add_to_list(xmldata, beginning, medium):
                             PHOTO_LIST.add(posts['photo-url'][0]['#text'])
                 else:
                     flag = False
-                    break
         except:
             flag = False
         
@@ -289,6 +288,14 @@ if __name__ == "__main__":
     
     print("\n\033[32m---<Tumblr Crawl>--<Ctrl+C to abort>---\033[0m")
     SAVE_PATH = os.path.join(SAVE_PATH, sys.argv[1])
+    
+    check_url = "http://{0}.tumblr.com/api/read?start=0".format(sys.argv[1])
+
+    try:
+        response = urllib.request.urlopen(check_url)
+    except urllib.error.URLError as e:
+            sys.stderr.write(e.reason + '\n')
+            sys.exit(1)
     
     try:
         os.makedirs(SAVE_PATH, exist_ok=True)
