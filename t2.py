@@ -34,6 +34,41 @@ from multiprocessing import Pool
 SAVE_PATH = os.getcwd()
 
 # Functions -----------------------------------------------------------------
+def generate_videos_manifest(tumblr, date_wanted):
+    flag = True
+    counter = 1
+    offset = 0
+    video_posts = []
+
+    while(flag):
+
+        url = "https://{0}.tumblr.com/api/read?type=video&num=50&start={1}"
+        url = url.format(sys.argv[1], offset)
+        print("Getting Videos Page {0}".format(counter))
+
+        try:
+            tumblr_doc = urlopen(url)
+        except urllib.error.URLError as e:
+            sys.exit("\033[31m" + str(e.reason) + "\033[0m" + "\n")
+
+        soup = BeautifulSoup(tumblr_doc, 'lxml')
+        posts = soup.find_all("post")
+
+        for i in posts:
+            tmp = i.attrs.get("date-gmt")
+            post_date = tmp[:10]
+
+            if post_date >= date_wanted:
+                tmp_string = str(i)
+                video_posts.append(tmp_string)
+            else:
+                flag =False
+
+        offset += 50
+        counter += 1
+
+    print(video_posts)
+
 def get_photo_urls(posts):
 
     photos = posts.find_all("photo-url", {"max-width" : "1280"})
@@ -50,16 +85,16 @@ def get_photo_urls(posts):
     return photo_url_set
 
 
-def generate_photos_manifest(tumblr, date_wanted):
+def generate_posts_list(tumblr, date_wanted, media):
     flag = True
-    photo_posts = []
+    posts_list = []
     counter = 1
     offset = 0
 
     while(flag):
-        url = "https://{0}.tumblr.com/api/read?type=photo&num=50&start={1}"
-        url = url.format(sys.argv[1], offset)
-        print("Getting Photos Page {0}".format(counter))
+        url = "https://{0}.tumblr.com/api/read?type={1}&num=50&start={2}"
+        url = url.format(sys.argv[1], media, offset)
+        print("Getting {0}s Page {1}".format(media.capitalize(),counter))
 
         try:
             tumblr_doc = urlopen(url)
@@ -75,14 +110,18 @@ def generate_photos_manifest(tumblr, date_wanted):
 
             if post_date >= date_wanted:
                 tmp_string = str(i)
-                photo_posts.append(tmp_string)
+                posts_list.append(tmp_string)
             else:
                 flag =False
 
         offset += 50
         counter += 1
 
-    photo_posts_list = BeautifulSoup(''.join(photo_posts), 'lxml')
+    return posts_list
+
+
+def process_photos(list):
+    photo_posts_list = BeautifulSoup(''.join(list), 'lxml')
     final_set = get_photo_urls(photo_posts_list)
     print("\033[33mCollecting {0} Photos\033[0m".format(len(final_set)))
     photos_save_path = os.path.join(SAVE_PATH, "photos")
@@ -172,4 +211,8 @@ except OSError as e:
     sys.exit("\033[31mTerminating> {0}\033[0m".format(e))
 
 if media_wanted != 2:
-    generate_photos_manifest(sys.argv[1], beginning)
+    wanted_posts = generate_posts_list(sys.argv[1], beginning, "photo")
+    process_photos(wanted_posts)
+
+if media_wanted != 1:
+    generate_videos_manifest(sys.argv[1], beginning)
