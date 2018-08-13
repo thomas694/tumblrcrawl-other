@@ -82,11 +82,13 @@ def add_to_list(xmldata, beginning, medium):
         try:
             for posts in xmldata['tumblr']['posts']['post']:
                 date_of_post = posts['@date-gmt'].split()[0]
+                print(posts['@id'], beginning)
                 
                 if date_of_post > beginning:
                     try:
                         video_match = pattern.match(posts['video-player'][1]['#text'])
                         video_url = video_match.group(1)
+                        print(video_url)
                         
                         if video_url.endswith(("/480", "/720")):
                             video_url = video_url[:-4]
@@ -100,11 +102,14 @@ def add_to_list(xmldata, beginning, medium):
                         else:
                             ARIA2C_VIDEO.add(video_url)
                     except:
-                        EXTERNAL_VIDEO.add(posts['video-source'])
+                        try:
+                            EXTERNAL_VIDEO.add(posts['video-source'])
+                        except:
+                            pass
                 else:
                     flag=False
                 
-        except:
+        except Exception as e:
             flag = False
     
     xmldata = []
