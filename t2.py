@@ -26,6 +26,7 @@ import urllib.error
 import datetime
 import datedelta
 import signal
+import re
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from multiprocessing import Pool
@@ -34,43 +35,41 @@ from multiprocessing import Pool
 SAVE_PATH = os.getcwd()
 
 # Functions -----------------------------------------------------------------
-def generate_videos_manifest(tumblr, date_wanted):
-    flag = True
-    counter = 1
-    offset = 0
-    video_posts = []
+def get_video_url(video_player):
+    video_location = []
+    video_player_soup = BeautifulSoup(''.join(video_player), 'lxml')
+    tumblr_vid = video_player_soup.find_all("source")
+    
+    if tumblr_vid == []:
+        external_vid = video_player_soup.find_all("iframe")
+        tmp =  external_vid[0].attrs.get("src")
 
-    while(flag):
+        if 'vimeo' in tmp:
+            tmp = tmp.split('?')[0]
 
-        url = "https://{0}.tumblr.com/api/read?type=video&num=50&start={1}"
-        url = url.format(sys.argv[1], offset)
-        print("Getting Videos Page {0}".format(counter))
+        video_location = ["vimeo", tmp]
+    else:
+        src = tumblr_vid[0].attrs.get("src")
+    
+        if src.endswith("/480"):
+            src = src[:-4]
 
-        try:
-            tumblr_doc = urlopen(url)
-        except urllib.error.URLError as e:
-            sys.exit("\033[31m" + str(e.reason) + "\033[0m" + "\n")
+        src = "".join((src, "/720"))
+        video_location = ["tumblr", src]
 
-        soup = BeautifulSoup(tumblr_doc, 'lxml')
-        posts = soup.find_all("post")
+    return video_location
 
-        for i in posts:
-            tmp = i.attrs.get("date-gmt")
-            post_date = tmp[:10]
 
-            if post_date >= date_wanted:
-                tmp_string = str(i)
-                video_posts.append(tmp_string)
-            else:
-                flag =False
+def process_videos(posts_list):
+    src_list = []
+    video_posts_list = BeautifulSoup(''.join(posts_list), 'lxml')
+    videos = video_posts_list.find_all("video-player", {"max-width" : "500"})
 
-        offset += 50
-        counter += 1
-
-    print(video_posts)
+    for i in videos:
+        print(get_video_url(i))
+#    print(get_video_urls(videos[0]))
 
 def get_photo_urls(posts):
-
     photos = posts.find_all("photo-url", {"max-width" : "1280"})
     photo_url_list = []
 
@@ -120,8 +119,8 @@ def generate_posts_list(tumblr, date_wanted, media):
     return posts_list
 
 
-def process_photos(list):
-    photo_posts_list = BeautifulSoup(''.join(list), 'lxml')
+def process_photos(posts_list):
+    photo_posts_list = BeautifulSoup(''.join(posts_list), 'lxml')
     final_set = get_photo_urls(photo_posts_list)
     print("\033[33mCollecting {0} Photos\033[0m".format(len(final_set)))
     photos_save_path = os.path.join(SAVE_PATH, "photos")
@@ -215,4 +214,5 @@ if media_wanted != 2:
     process_photos(wanted_posts)
 
 if media_wanted != 1:
-    generate_videos_manifest(sys.argv[1], beginning)
+    wanted_posts = generate_posts_list(sys.argv[1], beginning, "video")
+    process_videos(wanted_posts)
