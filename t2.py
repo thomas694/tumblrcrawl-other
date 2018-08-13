@@ -39,15 +39,21 @@ def get_video_url(video_player):
     video_location = []
     video_player_soup = BeautifulSoup(''.join(video_player), 'lxml')
     tumblr_vid = video_player_soup.find_all("source")
-    
+
     if tumblr_vid == []:
+        external_vid = []
         external_vid = video_player_soup.find_all("iframe")
+
+        if not external_vid:
+            print("DB", external_vid)
+            return  ["", ""]
+
         tmp =  external_vid[0].attrs.get("src")
 
-        if 'vimeo' in tmp:
+        if 'vimeo' or 'youtu' in tmp:
             tmp = tmp.split('?')[0]
 
-        video_location = ["vimeo", tmp]
+        video_location = ["ytdl", tmp]
     else:
         src = tumblr_vid[0].attrs.get("src")
     
@@ -61,12 +67,17 @@ def get_video_url(video_player):
 
 
 def process_videos(posts_list):
-    src_list = []
+    vids_list = []
     video_posts_list = BeautifulSoup(''.join(posts_list), 'lxml')
     videos = video_posts_list.find_all("video-player", {"max-width" : "500"})
+    vids_list = [get_video_url(i) for i in videos if videos]
 
-    for i in videos:
-        print(get_video_url(i))
+    regular = []
+    regular = video_posts_list.find_all("regular-body")
+    [vids_list.append(get_video_url(i)) for i in regular if regular]
+
+    for i in vids_list:
+        print(i)
 #    print(get_video_urls(videos[0]))
 
 def get_photo_urls(posts):
@@ -132,8 +143,7 @@ def process_photos(posts_list):
         sys.exit("Terminating: ".format(e))
 
     with open(manifest, 'wt') as f:
-        for u in final_set:
-            f.write(u + '\n')
+        [f.write(u + '\n') for u in final_set if final_set]
 
     subprocess.call(["aria2c", "-j8", "-i", manifest,
                      "--console-log-level=warn",
