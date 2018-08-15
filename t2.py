@@ -87,8 +87,11 @@ def get_photo_urls(posts):
     for i in photos:
         tmp = i.get_text()
         
-        if not tmp.endswith("gif"):
+        if gifs_wanted:
             photo_url_list.append(tmp)
+        else:
+            if not tmp.endswith("gif"):
+                photo_url_list.append(tmp)
 
     photo_url_set = set(photo_url_list)
 
@@ -183,15 +186,6 @@ args = sys.argv[2:]
 media_wanted = 0
 months_wanted = 72
 gifs_wanted = False
-#for arg in all_args:
-#    try:
-#        months_wanted = int(arg)
-#    except:
-#        if arg == 'p':
-#            media_wanted = 1
-#        elif arg == 'v':
-#            media_wanted = 2
-
 
 if 'p' in args:
     media_wanted = 1
@@ -223,7 +217,7 @@ else:
     beginning = "2012-01-01"
 
 print(
-"\n\033[32m---<Tumblr Crawl>-----<Ctrl+C to abort>---------\033[0m")
+"\n\033[32m---< Tumblr Crawl v2 >-------< Ctrl+C to abort >------------\033[0m")
 check_url = "http://{0}.tumblr.com/api/read?start=0".format(sys.argv[1])
 print("\033[33mChecking Tumblr {0}... \033[0m".format(sys.argv[1]),
         end = '', flush = True)
