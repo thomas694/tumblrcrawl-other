@@ -161,7 +161,7 @@ def sigint_handler(signal, frame):
 
 
 def usage():
-    print("""\033[33m\nUsage: tumblrcrawl.py TumblrName [v] [p] [{num}]\033[36m\n
+    sys.exit("""\033[33m\nUsage: tumblrcrawl.py TumblrName [v] [p] [{num}]\033[36m\n
 Name is required. If only name is given, tumblrcrawl.py will collect
 all photos and videos on site. Limit the collection with 
 the following options:
@@ -169,7 +169,6 @@ the following options:
    p - photos only
    {num} - (a number) only collect the last {num} number of months
            e.g. current month is 1\n\033[0m""")
-
 
 
 # Begin Here -----------------------------------------------------------------
@@ -180,17 +179,41 @@ if len(sys.argv) < 2:
 signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGQUIT, sigint_handler)
 
-all_args = sys.argv[2:]
+args = sys.argv[2:]
 media_wanted = 0
+months_wanted = 72
+gifs_wanted = False
+#for arg in all_args:
+#    try:
+#        months_wanted = int(arg)
+#    except:
+#        if arg == 'p':
+#            media_wanted = 1
+#        elif arg == 'v':
+#            media_wanted = 2
 
-for arg in all_args:
+
+if 'p' in args:
+    media_wanted = 1
+    args.remove('p')
+
+
+if 'v' in args:
+    media_wanted = 2
+    args.remove('v')
+
+if 'g' in args:
+    gifs_wanted = True
+    args.remove('g')
+
+if args:
     try:
-        months_wanted = int(arg)
+        months_wanted = int(args.pop())
     except:
-        if arg == 'p':
-            media_wanted = 1
-        elif arg == 'v':
-            media_wanted = 2
+        usage()
+
+if args:
+    usage()
 
 if months_wanted > 0:
     d = datetime.datetime.today()
