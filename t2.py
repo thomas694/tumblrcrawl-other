@@ -35,8 +35,36 @@ from multiprocessing import Pool
 SAVE_PATH = os.getcwd()
 
 # Functions -----------------------------------------------------------------
+def process_instagram(video_player_soup):
+    embed_code = str(list(video_player_soup.children)[0])
+    embed_code = embed_code.split('permalink="')[1]
+    embed_code = embed_code.split('?')[0]
+
+    try:
+        response = urlopen(embed_code)
+    except urllib.error.URLError as e:
+        sys.stderr.write(e.reason + '\n')
+        sys.exit()
+    
+    try:
+        data = response.read().decode("UTF-8")
+    except:
+        return ""
+
+    final_url = ""
+
+    try:
+        final_url = data.split('og:video" content="')[1]
+        final_url = final_url.split('"')[0]
+    except:
+        print("Instagram - Looks like a photo to me")
+
+    return final_url
+
+
 def get_video_url(video_player):
     video_location = []
+
     video_player_soup = BeautifulSoup(''.join(video_player), 'lxml')
     tumblr_vid = video_player_soup.find_all("source")
 
@@ -45,7 +73,8 @@ def get_video_url(video_player):
         external_vid = video_player_soup.find_all("iframe")
 
         if not external_vid:
-            print("DB", external_vid)
+            if 'instagram' in video_player_soup.prettify():
+                return ["insta", process_instagram(video_player_soup)]
             return  ["", ""]
 
         tmp =  external_vid[0].attrs.get("src")
@@ -170,6 +199,7 @@ all photos and videos on site. Limit the collection with
 the following options:
    v - videos only
    p - photos only
+   g - gifs as well
    {num} - (a number) only collect the last {num} number of months
            e.g. current month is 1\n\033[0m""")
 
