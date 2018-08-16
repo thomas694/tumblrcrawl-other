@@ -29,7 +29,6 @@ import signal
 import re
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
-from multiprocessing import Pool
 
 
 SAVE_PATH = os.getcwd()
@@ -57,7 +56,8 @@ def process_instagram(video_player_soup):
         final_url = data.split('og:video" content="')[1]
         final_url = final_url.split('"')[0]
     except:
-        print("Instagram - Looks like a photo to me")
+        #print("   Found Instagram photo")
+        pass
 
     return final_url
 
@@ -75,7 +75,9 @@ def get_video_url(video_player):
         if not external_vid:
             if 'instagram' in video_player_soup.prettify():
                 return ["insta", process_instagram(video_player_soup)]
-            return  ["", ""]
+            else:
+                #print("   Found Flickr Photo")
+                return  ["", ""]
 
         tmp =  external_vid[0].attrs.get("src")
 
@@ -105,9 +107,48 @@ def process_videos(posts_list):
     regular = video_posts_list.find_all("regular-body")
     [vids_list.append(get_video_url(i)) for i in regular if regular]
 
-    for i in vids_list:
-        print(i)
-#    print(get_video_urls(videos[0]))
+    tumblr_list = [i[1] for i in vids_list if i[1] and i[0] == "tumblr"]
+    insta_list  = [i[1] for i in vids_list if i[1] and i[0] == "insta"]
+    ytdl_list   = [i[1] for i in vids_list if i[1] and i[0] == "ytdl"]
+
+    videos_save_path = os.path.join(SAVE_PATH, "videos")
+    manifest = os.path.join(videos_save_path, "aria_video_manifest")
+
+    try:
+        os.makedirs(videos_save_path, exist_ok = True)
+    except OSError as e:
+        sys.exit("Terminating: ".format(e))
+
+    print("\033[33mCollecting {0} Tumblr Videos\033[0m".format(len(tumblr_list)))
+
+    with open(manifest, 'wt') as f:
+        [f.write(u + '\n') for u in tumblr_list if tumblr_list]
+    
+    if insta_list:
+        print("\033[33mAdding {0} Instagram Videos\033[0m".format(len(insta_list)))
+
+        with open(manifest, 'a') as f:
+            [f.write(u + '\n') for u in insta_list if insta_list]
+
+    subprocess.call(["aria2c", "-j8", "-i", manifest,
+                     "--console-log-level=warn",
+                     "--summary-interval=0",
+                     "--download-result=hide",
+                     "-c", "-d", videos_save_path])
+    print()
+    os.remove(manifest)
+
+    if ytdl_list:
+        manifest = os.path.join(videos_save_path, "ytdl_video_manifest")
+        print("\033[33mCollecting {0} External Videos\033[0m".format(len(ytdl_list)))
+        
+        with open(manifest, 'wt') as f:
+            [f.write(u + '\n') for u in ytdl_list if ytdl_list]
+
+        outstring = os.path.join(videos_save_path, "%(title)s-%(id)s.%(ext)s")
+        subprocess.call(["youtube-dl", "-a", manifest, "-i", "-o", outstring])
+        os.remove(manifest)
+
 
 def get_photo_urls(posts):
     photos = posts.find_all("photo-url", {"max-width" : "1280"})
