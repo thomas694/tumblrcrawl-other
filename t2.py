@@ -26,7 +26,7 @@ import urllib.error
 import datetime
 import datedelta
 import signal
-import re
+import glob
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
@@ -130,7 +130,7 @@ def process_videos(posts_list):
         with open(manifest, 'a') as f:
             [f.write(u + '\n') for u in insta_list if insta_list]
 
-    subprocess.call(["aria2c", "-j8", "-i", manifest,
+    subprocess.call(["aria2c", "-j6", "-i", manifest,
                      "--console-log-level=warn",
                      "--summary-interval=0",
                      "--download-result=hide",
@@ -189,16 +189,20 @@ def generate_posts_list(tumblr, date_wanted, media):
 
         for i in posts:
             tmp = i.attrs.get("date-gmt")
+
             post_date = tmp[:10]
 
             if post_date >= date_wanted:
                 tmp_string = str(i)
                 posts_list.append(tmp_string)
             else:
-                flag =False
+                flag = False
 
         offset += 50
         counter += 1
+
+        if len(posts) < 50:
+            flag = False
 
     return posts_list
 
@@ -231,6 +235,9 @@ def sigint_handler(signal, frame):
     cleanup = glob.glob(os.path.join(SAVE_PATH,  "*manifest"))
     for i in cleanup:
         os.remove(i)
+
+    print("\n\033[31mTerminated.\033[0m")
+    sys.exit(1)
 
 
 def usage():
