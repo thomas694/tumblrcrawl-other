@@ -286,7 +286,6 @@ if args:
     for u in args:
         if u.startswith('X-DIR'):
             SAVE_PATH = u[5:]
-            print("U  ", u)
             args.remove(u)
 
 if args:
@@ -332,4 +331,4 @@ if media_wanted != 1:
     process_videos(wanted_posts)
 
 if hold_on_complete:
-    input("Press [Enter] to close...")
+    input("\033[33m\nPress [Enter] to close...")
