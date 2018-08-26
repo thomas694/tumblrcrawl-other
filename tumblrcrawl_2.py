@@ -241,7 +241,7 @@ def sigint_handler(signal, frame):
 
 
 def usage():
-    sys.exit("""\033[33m\nUsage: tumblrcrawl.py TumblrName [v] [p] [{num}]\033[36m\n
+    sys.exit("""\033[33m\nUsage: tumblrcrawl.py TumblrName [v] [p] [g] [{num}]\033[36m\n
 Name is required. If only name is given, tumblrcrawl.py will collect
 all photos and videos on site. Limit the collection with 
 the following options:
@@ -264,11 +264,11 @@ args = sys.argv[2:]
 media_wanted = 0
 months_wanted = 72
 gifs_wanted = False
+hold_on_complete = False
 
 if 'p' in args:
     media_wanted = 1
     args.remove('p')
-
 
 if 'v' in args:
     media_wanted = 2
@@ -278,14 +278,23 @@ if 'g' in args:
     gifs_wanted = True
     args.remove('g')
 
+if 'h' in args:
+    hold_on_complete = True
+    args.remove('h')
+
+if args:
+    for u in args:
+        if u.startswith('X-DIR'):
+            SAVE_PATH = u[5:]
+            print("U  ", u)
+            args.remove(u)
+
 if args:
     try:
         months_wanted = int(args.pop())
-    except:
+        print("success")
+    except Exception as e:
         usage()
-
-if args:
-    usage()
 
 if months_wanted > 0:
     d = datetime.datetime.today()
@@ -321,3 +330,6 @@ if media_wanted != 2:
 if media_wanted != 1:
     wanted_posts = generate_posts_list(sys.argv[1], beginning, "video")
     process_videos(wanted_posts)
+
+if hold_on_complete:
+    input("Press [Enter] to close...")
