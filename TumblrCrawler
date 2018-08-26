@@ -107,7 +107,7 @@ class Form(QWidget):
         self.grid.addWidget(self.destLabel, 5, 1)
         self.grid.addLayout(self.hbox4, 5, 2, 1, 3)
         
-        self.vbox0.addWidget(QLabel(""))
+        #self.vbox0.addWidget(QLabel(""))
         self.vbox0.addLayout(self.grid)
         self.vbox0.addLayout(self.hbox1)
 

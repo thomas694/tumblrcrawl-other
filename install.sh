@@ -1,10 +1,10 @@
 #!/bin/sh
 
-/usr/bin/python3 -c "import xmltodict" 2>/dev/null
+/usr/bin/python3 -c "import bs4" 2>/dev/null
 
 if [ $? == 1 ]; then
-    echo "TumblrCrawl requires Python3 xmltodict."
-    echo "Try running 'pip install xmltodict' as super user."
+    echo "TumblrCrawl requires Python3 BeautifulSoup."
+    echo "Install from your Package Manager or try running 'pip install beautifulsoup4' as super user."
     exit 1
 fi
 
@@ -29,13 +29,13 @@ which youtube-dl 2>/dev/null >/dev/null
 
 if [ $? == 1 ]; then
     echo "TumblrCrawl requires youtube-dl to download external videos."
-    echo "Try running 'pip install youtube-dl' as super user."
+    echo "Install from your Package Manager or try running 'pip install youtube-dl' as super user."
     exit 1
 fi
 
 FLAG=0
 
-cp -v --remove-destination tumblrcrawl.py /usr/bin
+cp -v --remove-destination tumblrcrawl_2.py /usr/bin
 if [ $? == 1 ]; then FLAG=1; fi
 cp -v --remove-destination TumblrCrawler /usr/bin
 if [ $? == 1 ]; then FLAG=1; fi
