@@ -67,6 +67,7 @@ def get_video_url(video_player):
 
     video_player_soup = BeautifulSoup(''.join(video_player), 'lxml')
     tumblr_vid = video_player_soup.find_all("source")
+    
 
     if tumblr_vid == []:
         external_vid = []
@@ -83,15 +84,19 @@ def get_video_url(video_player):
 
         if 'vimeo' or 'youtu' in tmp:
             tmp = tmp.split('?')[0]
-
+            
+            if "player.vimeo.com" in tmp:
+                tmp = "https://vimeo.com/" + tmp.split('/')[-1]
+            
         video_location = ["ytdl", tmp]
     else:
         src = tumblr_vid[0].attrs.get("src")
+        #print(src)
     
-        if src.endswith("/480"):
-            src = src[:-4]
+        #if src.endswith("/480"):
+        #    src = src[:-4]
 
-        src = "".join((src, "/720"))
+        #src = "".join((src, "/720"))
         video_location = ["tumblr", src]
 
     return video_location
@@ -107,7 +112,7 @@ def process_videos(posts_list):
     regular = video_posts_list.find_all("regular-body")
     [vids_list.append(get_video_url(i)) for i in regular if regular]
 
-    tumblr_list = [i[1] for i in vids_list if i[1] and i[0] == "tumblr"]
+    tumblr_list = list(set([i[1] for i in vids_list if i[1] and i[0] == "tumblr"]))
     insta_list  = [i[1] for i in vids_list if i[1] and i[0] == "insta"]
     ytdl_list   = [i[1] for i in vids_list if i[1] and i[0] == "ytdl"]
 
